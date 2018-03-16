@@ -13,6 +13,7 @@
 #include <QLabel>
 #include <QGraphicsScene>
 #include <QGraphicsView>
+#include "keyboard/keyboard.h"
 
 using namespace cv;
 using namespace std;
@@ -34,17 +35,16 @@ private slots:
 
     void on_pushButton_2_clicked();
 
-    void on_pushButton_3_clicked();
+    void on_sendcarport_clicked();
 
-    void on_selectcarport_clicked();
-
-    void on_textBrowser_destroyed();
+    void open_keyboard_lineEdit();
 
 private:
     Ui::MainWindow *ui;
     Mat image;
     QImage img;                  //将用到的定义全部声明，应该没有必要，我习惯
     QString img_name;
+    Keyboard *lineEditkeyboard;
 };
 
 #endif // MAINWINDOW_H

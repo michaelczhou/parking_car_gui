@@ -123,13 +123,13 @@ void MainWindow::on_pushButton_clicked()
     //imread的第二个参数：读取4通道的png图像。其中第四个通道的数据类型和其他通道的一样，都是uchar型，完全透明为0，否则为255
     image=imread(img_name.toUtf8().data());
     //image = cv::imread(img_name.toLatin1().data());
-    namedWindow( "map", WINDOW_NORMAL );
+    //namedWindow( "map", WINDOW_NORMAL );
     //cv::setMouseCallback("map", mouseHandler, (void*)image);
-    cv::setMouseCallback("map", mouseHandler, 0);
-    if(!image.empty())
-    {
-        imshow("map",image);
-    }
+    //cv::setMouseCallback("map", mouseHandler, 0);
+//    if(!image.empty())
+//    {
+//        imshow("map",image);
+//    }
     cv::cvtColor(image,image,CV_BGR2RGB);
     QImage img = QImage((const unsigned char*)(image.data),image.cols,image.rows,QImage::Format_RGB888);
     ui->label->setPixmap(QPixmap::fromImage(img));

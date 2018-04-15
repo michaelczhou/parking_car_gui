@@ -14,11 +14,15 @@ TEMPLATE = app
 
 SOURCES += main.cpp\
         mainwindow.cpp \
-    keyboard/keyboard.cpp
+    keyboard/keyboard.cpp \
+    commonhelper.cpp \
+    udpclient.cpp
 
 HEADERS  += mainwindow.h \
     keyboard/keyboard.h \
-    keyboard/ui_keyboard.h
+    keyboard/ui_keyboard.h \
+    commonhelper.h \
+    udpclient.h
 
 FORMS    += mainwindow.ui \
     keyboard/keyboard.ui

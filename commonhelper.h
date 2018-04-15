@@ -2,6 +2,7 @@
 #define COMMONHELPER_H
 
 #include <QObject>
+#include "qhostaddress.h"
 #include <QHostAddress>
 
 class CommonHelper : public QObject

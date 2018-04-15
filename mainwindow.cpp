@@ -6,6 +6,12 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/core/core.hpp>
 #include <QtGui>
+#include <QUdpSocket>
+#include "udpclient.h"
+#include <QLabel>
+#include <QDate>
+#include "commonhelper.h"
+#include <QSettings>
 
 using namespace cv;
 using namespace std;
@@ -18,7 +24,28 @@ MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
 {
+    qDebug("%s", __func__);
     ui->setupUi(this);
+
+    /* 读取配置文件 */
+    doSettings(false);
+
+    /* 设置默认通讯模式 */
+    ui->tcpclient_radioButton->setChecked(true);
+    /** 目前设置为UDP为默认方式 */
+    ui->udp_radioButton->setChecked(true);
+    /** 设置远程主机IP地址 获取本机IP */
+    ui->remoteIP_lineEdit->setText(mRemoteIp);
+    /* 设置远程端口号 */
+    /* TODO: 将其设置为不能以0开头 */
+    ui->remoteport_spinBox->setRange(1024,9999);
+    ui->remoteport_spinBox->setValue(mRemotePort);
+    /* 设置本地端口号 */
+    ui->localport_spinBox->setRange(1024,9999);
+    ui->localport_spinBox->setValue(mLocalPort);
+
+    isConnect = false;
+
     lineEditkeyboard = new Keyboard();
     connect( ui->input ,SIGNAL(selectionChanged()),this ,SLOT(open_keyboard_lineEdit()));
 }

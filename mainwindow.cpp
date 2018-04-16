@@ -31,7 +31,7 @@ MainWindow::MainWindow(QWidget *parent) :
     doSettings(false);
 
     /* 设置默认通讯模式 */
-    ui->tcpclient_radioButton->setChecked(true);
+    //ui->tcpclient_radioButton->setChecked(true);
     /** 目前设置为UDP为默认方式 */
     ui->udp_radioButton->setChecked(true);
     /** 设置远程主机IP地址 获取本机IP */
@@ -46,13 +46,109 @@ MainWindow::MainWindow(QWidget *parent) :
 
     isConnect = false;
 
+    // 状态栏
+    statusLabel = new QLabel;
+    statusLabel->setMinimumSize(260, 20); // 设置标签最小大小
+    statusLabel->setFrameShape(QFrame::WinPanel); // 设置标签形状
+    statusLabel->setFrameShadow(QFrame::Sunken); // 设置标签阴影
+    ui->statusBar->addWidget(statusLabel);
+    statusLabel->setText("UDP通信停止");
+    statusLabel->setAlignment(Qt::AlignHCenter);
+
+    // 时间 TODO:要进行更新
+    timeLabel = new QLabel;
+    timeLabel->setMinimumSize(90, 20); // 设置标签最小大小
+    timeLabel->setMaximumWidth(90);
+    timeLabel->setFrameShape(QFrame::WinPanel); // 设置标签形状
+    timeLabel->setFrameShadow(QFrame::Sunken); // 设置标签阴影
+    ui->statusBar->addWidget(timeLabel);
+    timeLabel->setText(QDate::currentDate().toString("yyyy-MM-dd"));
+
+    // 更新接收到的数据
+    connect(&client, SIGNAL(valueChanged(QString)), this, SLOT(updateReceiveText(QString)));
+    connect(&client,
+            SIGNAL(updateState(QString, QVariant, QVariant)),
+            this, SLOT(updateStateBar(QString, QVariant, QVariant)));
+
+    init();
+
+    mReceiveNum = mSendNum = 0;
+
+    //键盘
     lineEditkeyboard = new Keyboard();
     connect( ui->input ,SIGNAL(selectionChanged()),this ,SLOT(open_keyboard_lineEdit()));
 }
 
-MainWindow::~MainWindow()
+void MainWindow::doSettings(bool isWrite)
 {
-    delete ui;
+    QSettings settings("Yzs_think", "Application");
+    const QString REMOTE_IP = "remoteip";
+    const QString REMOTE_PORT = "remoteport";
+    const QString LOCAL_PORT = "localport";
+    if(isWrite) {
+        settings.setValue(REMOTE_IP, mRemoteIp);
+        settings.setValue(REMOTE_PORT, mRemotePort);
+        settings.setValue(LOCAL_PORT, mLocalPort);
+    } else {
+        mRemoteIp = settings.value(REMOTE_IP, chelper.getLocalHostIP().toString()).toString();
+        mRemotePort = settings.value(REMOTE_PORT, 1234).toInt();
+        mLocalPort = settings.value(LOCAL_PORT, 2468).toInt();
+    }
+}
+
+
+void MainWindow::connectNet()
+{
+    qDebug("%s", __func__);
+
+    mRemoteIp = ui->remoteIP_lineEdit->text();
+    mRemotePort = ui->remoteport_spinBox->text().toInt();
+    mLocalPort = ui->localport_spinBox->text().toInt();
+    updateStateBar("UDP通信 " + mRemoteIp + ":" + QString().number(mRemotePort),
+                   QVariant(QVariant::Int), QVariant(QVariant::Int));
+
+    // No.1
+    isConnect = true;
+    // 将状态设置为 通
+    ui->state_label->setText("通");
+    QPalette pa;
+    pa.setColor(QPalette::WindowText,Qt::blue);
+    ui->state_label->setPalette(pa);
+
+    // 将按钮设置为　断开网络
+    ui->connect_pushButton->setText("断开网络");
+
+    // 禁用远程端口，本地端口，远程IP
+    ui->remoteIP_lineEdit->setEnabled(false);
+    ui->remoteport_spinBox->setEnabled(false);
+    ui->localport_spinBox->setEnabled(false);
+    // 使能button
+    //ui->handSend_pushButton->setEnabled(true);
+
+    client.udpStart(chelper.getLocalHostIP(), mLocalPort, QHostAddress(mRemoteIp), mRemotePort);
+}
+
+void MainWindow::updateReceiveText(const QString string)
+{
+    QString oldString = ui->receive_textBrowser->toPlainText();
+    ui->receive_textBrowser->setText(oldString + string + "\n");
+
+    // 将光标移动到最后位置
+    QTextCursor tmpCursor = ui->receive_textBrowser->textCursor();
+    tmpCursor.movePosition(QTextCursor::End, QTextCursor::MoveAnchor, 4);
+    ui->receive_textBrowser->setTextCursor(tmpCursor);
+}
+
+/**
+ * @brief MainWindow::updateStateBar
+ * @param state 状态
+ * @param inNum 接收数值
+ * @param outNum 发送数值
+ */
+void MainWindow::updateStateBar(QString state, QVariant inNum, QVariant outNum)
+{
+    if(!state.isNull())
+        statusLabel->setText(state);
 }
 void mouseHandler(int event, int x, int y, int flags, void* param)
 {
@@ -143,6 +239,74 @@ void on_mouse( int event, int x, int y, int flags, void* ustc)
         cvCopy(image,dst);
     }
 }
+/**
+ * 初始化UDP时调用该函数
+ * @brief MainWindow::init
+ */
+void MainWindow::init()
+{
+    qDebug("%s", __func__);
+    // No.1
+    isConnect = false;
+    // 将状态设置为 断
+    ui->state_label->setText("断");
+    QPalette pa;
+    pa.setColor(QPalette::WindowText,Qt::red);
+    ui->state_label->setPalette(pa);
+
+    // 将按钮设置为　连接网络
+    ui->connect_pushButton->setText("连接网络");
+
+    // 使能远程端口，本地端口，远程IP
+    ui->remoteIP_lineEdit->setEnabled(true);
+    ui->remoteport_spinBox->setEnabled(true);
+    ui->localport_spinBox->setEnabled(true);
+    // 禁用button
+    //ui->handSend_pushButton->setEnabled(false);
+    //
+    client.udpStop(NULL, NULL, NULL);
+
+    updateStateBar("本地IP: " + chelper.getLocalHostIP().toString() + " 无连接",
+                   QVariant(QVariant::Int), QVariant(QVariant::Int));
+}
+
+/**
+ * 断开UDP时调用该函数
+ * @brief MainWindow::disConnectNet
+ */
+void MainWindow::disConnectNet()
+{
+    qDebug("%s", __func__);
+    // No.1
+    isConnect = false;
+    // 将状态设置为 断
+    ui->state_label->setText("断");
+    QPalette pa;
+    pa.setColor(QPalette::WindowText,Qt::red);
+    ui->state_label->setPalette(pa);
+
+    // 将按钮设置为　连接网络
+    ui->connect_pushButton->setText("连接网络");
+
+    // 使能远程端口，本地端口，远程IP
+    ui->remoteIP_lineEdit->setEnabled(true);
+    ui->remoteport_spinBox->setEnabled(true);
+    ui->localport_spinBox->setEnabled(true);
+    // 禁用button
+    //ui->handSend_pushButton->setEnabled(false);
+    //
+    client.udpStop(NULL, NULL, NULL);
+
+
+    updateStateBar(tr("UDP通信停止"), QVariant(QVariant::Int), QVariant(QVariant::Int));
+}
+
+MainWindow::~MainWindow()
+{
+    //doSettings(true);
+    delete ui;
+}
+
 void MainWindow::on_pushButton_clicked()
 {
     img_name = QFileDialog::getOpenFileName( this, tr("Open Image"), ".",tr("Image Files(*.png *.jpg *.jpeg *.bmp)"));
@@ -175,11 +339,6 @@ void MainWindow::on_pushButton_clicked()
 
 }
 
-void MainWindow::on_pushButton_2_clicked()
-{
-    //close();
-    qApp->quit();
-}
 
 void MainWindow::open_keyboard_lineEdit()
 {
@@ -192,3 +351,21 @@ void MainWindow::on_sendcarport_clicked()
 {
 
 }
+
+void MainWindow::on_connect_pushButton_clicked()
+{
+    qDebug("%s", __func__);
+    // 如果当前网络是连接状态　调用断开连接函数
+    if(isConnect) {
+        disConnectNet();
+    } else { // 否则调用连接函数
+        connectNet();
+    }
+}
+
+void MainWindow::on_quit_pushButton_clicked()
+{
+    qApp->quit();
+}
+
+
